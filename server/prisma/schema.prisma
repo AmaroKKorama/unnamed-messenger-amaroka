@@ -1,0 +1,78 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int     @id @default(autoincrement())
+  username  String  @unique
+  nickname  String
+  avatar    String?
+  birthday  DateTime?
+  password  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  directChatsA DirectChat[] @relation("ChatUserA")
+  directChatsB DirectChat[] @relation("ChatUserB")
+  directMessages DirectMessage[]
+  hiddenDirectChats HiddenDirectChat[]
+}
+
+model Message {
+  id        String   @id
+  room      String
+  author    String
+  authorUsername String?
+  avatar    String?
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([room, createdAt])
+  @@index([authorUsername])
+}
+
+model DirectChat {
+  id        String   @id @default(cuid())
+  userA     Int
+  userB     Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userAUser User     @relation("ChatUserA", fields: [userA], references: [id])
+  userBUser User     @relation("ChatUserB", fields: [userB], references: [id])
+  messages  DirectMessage[]
+  hiddenFor HiddenDirectChat[]
+
+  @@unique([userA, userB])
+}
+
+model HiddenDirectChat {
+  id     String @id @default(cuid())
+  userId Int
+  chatId String
+  user   User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chat   DirectChat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, chatId])
+}
+
+model DirectMessage {
+  id        String   @id
+  chat      DirectChat @relation(fields: [chatId], references: [id])
+  chatId    String
+  author    User      @relation(fields: [authorId], references: [id])
+  authorId  Int
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([chatId, createdAt])
+}
